@@ -1,109 +1,77 @@
-# Teeter - Remake du jeu classique HTC
+# Teeter - Classic HTC Game Remake
 
-Un remake moderne du jeu Teeter original de HTC, recréé à partir des ressources extraites.
+A modern remake of the original HTC Teeter game, recreated from extracted resources.
 
 ## Description
 
-Teeter est un jeu de labyrinthe basé sur l'accéléromètre où vous devez guider une balle à travers 32 niveaux en évitant les trous et en atteignant l'objectif.
+Teeter is an accelerometer-based maze game where you must guide a ball through 32 levels while avoiding holes and reaching the goal.
 
-## Fonctionnalités
+## Features
 
-- ✅ 32 niveaux originaux
-- ✅ Contrôles par accéléromètre
-- ✅ Effets sonores et vibrations
-- ✅ Graphismes originaux du jeu HTC
-- ✅ Suivi du temps et des tentatives
-- ✅ Compatible avec les appareils Android modernes (API 24+)
+- 32 original levels
+- Accelerometer controls
+- Sound effects and vibrations
+- Original HTC game graphics
+- Time and attempts tracking
+- Compatible with modern Android devices (API 24+)
 
 ## Technologies
 
-- **Langage**: Kotlin
+- **Language**: Kotlin
 - **Minimum SDK**: Android 7.0 (API 24)
 - **Target SDK**: Android 14 (API 34)
-- **Architecture**: Custom Game Engine avec SurfaceView
+- **Architecture**: Custom Game Engine with SurfaceView
 
-## Structure du projet
+## How to Build
 
-```
-TeeterGame/
-├── app/
-│   ├── src/main/
-│   │   ├── java/com/htc/android/teeter/
-│   │   │   ├── game/
-│   │   │   │   └── GameView.kt          # Moteur de jeu principal
-│   │   │   ├── models/
-│   │   │   │   ├── Level.kt             # Modèle de niveau
-│   │   │   │   └── GameState.kt         # État du jeu
-│   │   │   ├── utils/
-│   │   │   │   └── LevelParser.kt       # Parseur XML des niveaux
-│   │   │   ├── SplashActivity.kt        # Écran de démarrage
-│   │   │   ├── GameActivity.kt          # Activité principale du jeu
-│   │   │   └── ScoreActivity.kt         # Écran des scores
-│   │   └── res/
-│   │       ├── drawable/                # Images du jeu original
-│   │       ├── raw/                     # Sons (.ogg)
-│   │       └── xml/                     # Définitions des 32 niveaux
-│   └── build.gradle.kts
-├── build.gradle.kts
-└── settings.gradle.kts
-```
+### Prerequisites
+- Android Studio Hedgehog or newer
+- JDK 8 or newer
+- Android SDK with API 34
 
-## Comment compiler
+### Steps
 
-### Prérequis
-- Android Studio Hedgehog ou plus récent
-- JDK 8 ou plus récent
-- SDK Android avec API 34
-
-### Étapes
-
-1. Ouvrir le projet dans Android Studio:
+1. Open the project in Android Studio:
    ```
-   File > Open > Sélectionner le dossier TeeterGame
+   File > Open > Select the folder
    ```
 
-2. Synchroniser Gradle:
+2. Sync Gradle:
    ```
    File > Sync Project with Gradle Files
    ```
 
-3. Compiler et installer:
+3. Build and install:
    ```
    Run > Run 'app'
    ```
-   Ou via ligne de commande:
+   Or via command line:
    ```bash
    cd TeeterGame
    ./gradlew assembleDebug
-   # L'APK sera dans app/build/outputs/apk/debug/
+   # APK will be in app/build/outputs/apk/debug/
    ```
 
-## Comment jouer
+## How to Play
 
-1. Lancez l'application
-2. Inclinez votre appareil pour contrôler la balle
-3. Évitez les trous noirs
-4. Atteignez la zone verte (goal) pour terminer le niveau
-5. Complétez les 32 niveaux !
+1. Launch the application
+2. Tilt your device to control the ball
+3. Avoid the black holes
+4. Reach the green zone (goal) to complete the level
+5. Complete all 32 levels!
 
-## Ressources extraites utilisées
+## Technical Notes
 
-- **Images**: Balle, trous, murs, maze background, animations
-- **Sons**: hole.ogg, level_complete.ogg, game_complete.ogg
-- **Niveaux**: 32 fichiers XML définissant les positions des murs, trous et objectifs
+- The game uses SensorManager to detect accelerometer movements
+- Ball physics include velocity, friction and collisions
+- Levels are dynamically loaded from XML files
+- Rendering is done with Canvas on SurfaceView for better performance
 
-## Notes techniques
+## License
 
-- Le jeu utilise le SensorManager pour détecter les mouvements de l'accéléromètre
-- La physique de la balle inclut la vélocité, la friction et les collisions
-- Les niveaux sont chargés dynamiquement depuis les fichiers XML
-- Le rendu est fait avec Canvas sur SurfaceView pour de meilleures performances
+This project is an unofficial remake of the original HTC Teeter game, created for educational and preservation purposes.
 
-## Licence
+## Credits
 
-Ce projet est un remake non officiel du jeu original Teeter de HTC, créé à des fins éducatives et de préservation.
-
-## Crédits
-
-- Jeu original: HTC Corporation
-- Remake: Créé à partir des ressources extraites de l'application originale
+- Original game: HTC Corporation
+- Remake: Created from resources extracted from the original application
