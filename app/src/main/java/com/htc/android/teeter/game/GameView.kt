@@ -78,6 +78,8 @@ class GameView @JvmOverloads constructor(
     private var wallBitmap: Bitmap? = null
     private var mazeBitmap: Bitmap? = null
     private var shadowBitmap: Bitmap? = null
+    private val holeAnimFrames = mutableListOf<Bitmap>()
+    private val endAnimFrames = mutableListOf<Bitmap>()
     
     // Game callbacks
     var onLevelComplete: (() -> Unit)? = null
@@ -121,6 +123,25 @@ class GameView @JvmOverloads constructor(
             wallBitmap = BitmapFactory.decodeResource(resources, R.drawable.wall, options)
             mazeBitmap = BitmapFactory.decodeResource(resources, R.drawable.maze, options)
             shadowBitmap = BitmapFactory.decodeResource(resources, R.drawable.shadow, options)
+            
+            // Load hole animation frames (001 to 020)
+            for (i in 1..20) {
+                val resName = "hole_anim_%03d".format(i)
+                val resId = resources.getIdentifier(resName, "drawable", context.packageName)
+                if (resId != 0) {
+                    holeAnimFrames.add(BitmapFactory.decodeResource(resources, resId, options))
+                }
+            }
+            
+            // Load and split end animation sprite (3200x100 = 32 frames of 100x100)
+            val endAnimSprite = BitmapFactory.decodeResource(resources, R.drawable.end_anim, options)
+            val frameWidth = 100
+            val frameHeight = 100
+            val frameCount = endAnimSprite.width / frameWidth
+            for (i in 0 until frameCount) {
+                val frameBitmap = Bitmap.createBitmap(endAnimSprite, i * frameWidth, 0, frameWidth, frameHeight)
+                endAnimFrames.add(frameBitmap)
+            }
             
             holeSound = soundPool.load(context, R.raw.hole, 1)
             levelCompleteSound = soundPool.load(context, R.raw.level_complete, 1)
@@ -281,12 +302,16 @@ class GameView @JvmOverloads constructor(
         val elapsed = System.currentTimeMillis() - animationStartTime
         animationProgress = (elapsed.toFloat() / animationDuration).coerceIn(0f, 1f)
         
-        // Ease-in effect (accelerating toward target)
-        val easedProgress = animationProgress * animationProgress
-        
-        // Move ball toward target using saved start positions
-        ballX = animationStartX + (animationTargetX - animationStartX) * easedProgress
-        ballY = animationStartY + (animationTargetY - animationStartY) * easedProgress
+        // Move ball toward target only for HOLE_FALL
+        if (animationType == AnimationType.HOLE_FALL) {
+            val easedProgress = animationProgress * animationProgress
+            ballX = animationStartX + (animationTargetX - animationStartX) * easedProgress
+            ballY = animationStartY + (animationTargetY - animationStartY) * easedProgress
+        } else if (animationType == AnimationType.GOAL_SUCCESS) {
+            // Keep ball at goal position and hidden
+            ballX = animationTargetX
+            ballY = animationTargetY
+        }
         
         // Animation complete
         if (animationProgress >= 1f) {
@@ -475,6 +500,8 @@ class GameView @JvmOverloads constructor(
         level?.let {
             val endX = it.endX * scaleX
             val endY = it.endY * scaleY
+            
+            // Draw goal bitmap
             endBitmap?.let { bitmap ->
                 val goalPaint = Paint().apply {
                     isAntiAlias = true
@@ -487,33 +514,84 @@ class GameView @JvmOverloads constructor(
                     drawBitmap(bitmap, -bitmap.width / 2f, -bitmap.height / 2f, goalPaint)
                 }
             }
+            
+            // Draw goal animation on top if active
+            if (isAnimating && animationType == AnimationType.GOAL_SUCCESS && endAnimFrames.isNotEmpty()) {
+                val frameIndex = (animationProgress * endAnimFrames.size).toInt()
+                    .coerceIn(0, endAnimFrames.size - 1)
+                val frame = endAnimFrames[frameIndex]
+                
+                val animPaint = Paint().apply {
+                    isAntiAlias = true
+                    isFilterBitmap = true
+                }
+                val avgScale = (scaleX + scaleY) / 2f
+                // Match the size of the goal/end bitmap
+                val animScale = (endBitmap?.width?.toFloat() ?: 100f) / frame.width
+                canvas.withSave {
+                    translate(endX, endY)
+                    scale(avgScale * animScale, avgScale * animScale)
+                    drawBitmap(frame, -frame.width / 2f, -frame.height / 2f, animPaint)
+                }
+            }
         }
         
-        // Draw ball
-        ballBitmap?.let { ball ->
-            // Calculate scale for animation
-            var scale = 1f
-            var alpha = 255
-            if (isAnimating) {
-                // Shrink ball as it falls into hole or grows into goal
-                scale = 1f - (animationProgress * 0.8f) // Shrink to 20% of original size
-                alpha = (255 * (1f - animationProgress * 0.5f)).toInt() // Fade out
+        // Draw ball or animation
+        if (isAnimating) {
+            when (animationType) {
+                AnimationType.HOLE_FALL -> {
+                    // Draw hole animation frames (scaled)
+                    if (holeAnimFrames.isNotEmpty()) {
+                        val frameIndex = (animationProgress * holeAnimFrames.size).toInt()
+                            .coerceIn(0, holeAnimFrames.size - 1)
+                        val frame = holeAnimFrames[frameIndex]
+                        
+                        val framePaint = Paint().apply {
+                            isAntiAlias = true
+                            isFilterBitmap = true
+                        }
+                        val avgScale = (scaleX + scaleY) / 2f
+                        // Scale to match ball size approximately
+                        val animScale = (ballRadius * 2f) / frame.width
+                        canvas.withSave {
+                            translate(ballX, ballY)
+                            scale(avgScale * animScale, avgScale * animScale)
+                            drawBitmap(frame, -frame.width / 2f, -frame.height / 2f, framePaint)
+                        }
+                    }
+                }
+                AnimationType.GOAL_SUCCESS -> {
+                    // Ball is hidden during goal animation (animation plays at goal position)
+                }
+                else -> {
+                    // Draw normal ball if animation type is NONE (shouldn't happen)
+                    ballBitmap?.let { ball ->
+                        val ballPaint = Paint().apply {
+                            isAntiAlias = true
+                            isFilterBitmap = true
+                        }
+                        val avgScale = (scaleX + scaleY) / 2f
+                        canvas.withSave {
+                            translate(ballX, ballY)
+                            scale(avgScale, avgScale)
+                            drawBitmap(ball, -ball.width / 2f, -ball.height / 2f, ballPaint)
+                        }
+                    }
+                }
             }
-            
-            val ballPaint = Paint().apply {
-                isAntiAlias = true
-                isFilterBitmap = true
-                xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_OVER)
-                this.alpha = alpha
-            }
-            
-            canvas.withSave {
-                translate(ballX, ballY)
-                // Scale ball bitmap to match the scaled radius
+        } else {
+            // Draw normal ball
+            ballBitmap?.let { ball ->
+                val ballPaint = Paint().apply {
+                    isAntiAlias = true
+                    isFilterBitmap = true
+                }
                 val avgScale = (scaleX + scaleY) / 2f
-                val finalScale = scale * avgScale
-                scale(finalScale, finalScale)
-                drawBitmap(ball, -ball.width / 2f, -ball.height / 2f, ballPaint)
+                canvas.withSave {
+                    translate(ballX, ballY)
+                    scale(avgScale, avgScale)
+                    drawBitmap(ball, -ball.width / 2f, -ball.height / 2f, ballPaint)
+                }
             }
         }
     }
