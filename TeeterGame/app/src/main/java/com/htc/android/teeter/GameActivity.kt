@@ -165,11 +165,18 @@ class GameActivity : AppCompatActivity() {
     }
     
     private fun showGameCompleteDialog() {
-        val intent = Intent(this, ScoreActivity::class.java)
-        intent.putExtra("totalTime", gameState.totalTime)
-        intent.putExtra("totalAttempts", gameState.totalAttempts)
-        startActivity(intent)
-        finish()
+        runOnUiThread {
+            try {
+                val intent = Intent(this, ScoreActivity::class.java)
+                intent.putExtra("totalTime", gameState.totalTime)
+                intent.putExtra("totalAttempts", gameState.totalAttempts)
+                startActivity(intent)
+                finish()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(this, "Error loading score screen: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
     }
     
     override fun onPause() {
