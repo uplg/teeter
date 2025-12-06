@@ -125,12 +125,17 @@ class GameView @JvmOverloads constructor(
             shadowBitmap = BitmapFactory.decodeResource(resources, R.drawable.shadow, options)
             
             // Load hole animation frames (001 to 020)
-            for (i in 1..20) {
-                val resName = "hole_anim_%03d".format(i)
-                val resId = resources.getIdentifier(resName, "drawable", context.packageName)
-                if (resId != 0) {
-                    holeAnimFrames.add(BitmapFactory.decodeResource(resources, resId, options))
-                }
+            val holeAnimResIds = listOf(
+                R.drawable.hole_anim_001, R.drawable.hole_anim_002, R.drawable.hole_anim_003,
+                R.drawable.hole_anim_004, R.drawable.hole_anim_005, R.drawable.hole_anim_006,
+                R.drawable.hole_anim_007, R.drawable.hole_anim_008, R.drawable.hole_anim_009,
+                R.drawable.hole_anim_010, R.drawable.hole_anim_011, R.drawable.hole_anim_012,
+                R.drawable.hole_anim_013, R.drawable.hole_anim_014, R.drawable.hole_anim_015,
+                R.drawable.hole_anim_016, R.drawable.hole_anim_017, R.drawable.hole_anim_018,
+                R.drawable.hole_anim_019, R.drawable.hole_anim_020
+            )
+            holeAnimResIds.forEach { resId ->
+                holeAnimFrames.add(BitmapFactory.decodeResource(resources, resId, options))
             }
             
             // Load and split end animation sprite (3200x100 = 32 frames of 100x100)

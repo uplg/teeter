@@ -120,11 +120,7 @@ class GameActivity : AppCompatActivity() {
             val levelSeconds = (levelTime / 1000) % 60
             val levelMinutes = (levelTime / 60000) % 60
             val levelHours = (levelTime / 3600000)
-            val levelTimeStr = if (levelHours > 0) {
-                String.format(Locale.getDefault(), "%d:%02d:%02d", levelHours, levelMinutes, levelSeconds)
-            } else {
-                String.format(Locale.getDefault(), "%d:%02d:%02d", levelMinutes / 60, levelMinutes % 60, levelSeconds)
-            }
+            val levelTimeStr = String.format(Locale.getDefault(), "%d:%02d:%02d", levelHours, levelMinutes, levelSeconds)
             dialogView.findViewById<TextView>(R.id.levelTimeText).text = levelTimeStr
             dialogView.findViewById<TextView>(R.id.levelAttemptsText).text = 
                 gameState.levelAttempts.toString()
@@ -134,11 +130,7 @@ class GameActivity : AppCompatActivity() {
             val totalSeconds = (totalTime / 1000) % 60
             val totalMinutes = (totalTime / 60000) % 60
             val totalHours = (totalTime / 3600000)
-            val totalTimeStr = if (totalHours > 0) {
-                String.format(Locale.getDefault(), "%d:%02d:%02d", totalHours, totalMinutes, totalSeconds)
-            } else {
-                String.format(Locale.getDefault(), "%d:%02d:%02d", totalMinutes / 60, totalMinutes % 60, totalSeconds)
-            }
+            val totalTimeStr = String.format(Locale.getDefault(), "%d:%02d:%02d", totalHours, totalMinutes, totalSeconds)
             dialogView.findViewById<TextView>(R.id.totalTimeText).text = totalTimeStr
             dialogView.findViewById<TextView>(R.id.totalAttemptsText).text = 
                 gameState.totalAttempts.toString()
