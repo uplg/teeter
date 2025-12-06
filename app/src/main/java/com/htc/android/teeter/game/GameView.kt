@@ -377,7 +377,9 @@ class GameView @JvmOverloads constructor(
             val holeX = hole.x * scaleX
             val holeY = hole.y * scaleY
             val distance = sqrt((ballX - holeX) * (ballX - holeX) + (ballY - holeY) * (ballY - holeY))
-            if (distance < ballRadius + 15f) {
+            val avgScale = (scaleX + scaleY) / 2f
+            val holeRadius = 20f * avgScale // Scaled hole detection radius
+            if (distance < ballRadius + holeRadius) {
                 return Pair(true, Pair(holeX, holeY))
             }
         }
@@ -389,7 +391,9 @@ class GameView @JvmOverloads constructor(
             val endX = it.endX * scaleX
             val endY = it.endY * scaleY
             val distance = sqrt((ballX - endX) * (ballX - endX) + (ballY - endY) * (ballY - endY))
-            if (distance < ballRadius + 20f) {
+            val avgScale = (scaleX + scaleY) / 2f
+            val goalRadius = 25f * avgScale // Scaled goal detection radius
+            if (distance < ballRadius + goalRadius) {
                 return Pair(true, Pair(endX, endY))
             }
         }
