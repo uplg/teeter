@@ -1,23 +1,28 @@
 package com.htc.android.teeter.utils
 
 import android.content.Context
+import com.htc.android.teeter.R
 import com.htc.android.teeter.models.Hole
 import com.htc.android.teeter.models.Level
 import com.htc.android.teeter.models.Wall
 import org.xmlpull.v1.XmlPullParser
-import org.xmlpull.v1.XmlPullParserFactory
 
 object LevelParser {
     
+    // Generate level resources using reflection only once at initialization
+    private val levelResources: IntArray by lazy {
+        R.xml::class.java.fields
+            .filter { it.name.startsWith("level") }
+            .sortedBy { it.name }
+            .map { it.getInt(null) }
+            .toIntArray()
+    }
+    
     fun loadLevel(context: Context, levelNumber: Int): Level? {
         try {
-            val resourceName = "level%03d".format(levelNumber)
-            val resourceId = context.resources.getIdentifier(
-                resourceName, "xml", context.packageName
-            )
+            if (levelNumber < 1 || levelNumber > levelResources.size) return null
             
-            if (resourceId == 0) return null
-            
+            val resourceId = levelResources[levelNumber - 1]
             val parser = context.resources.getXml(resourceId)
             
             var beginX = 0f
@@ -65,5 +70,5 @@ object LevelParser {
         }
     }
     
-    fun getTotalLevels(): Int = 32
+    fun getTotalLevels(): Int = levelResources.size
 }

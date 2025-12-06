@@ -2,6 +2,7 @@ package com.htc.android.teeter.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 object GamePreferences {
     private const val PREFS_NAME = "TeeterPrefs"
@@ -17,7 +18,9 @@ object GamePreferences {
     }
     
     fun saveCurrentLevel(context: Context, level: Int) {
-        getPrefs(context).edit().putInt(KEY_CURRENT_LEVEL, level).apply()
+        getPrefs(context).edit {
+            putInt(KEY_CURRENT_LEVEL, level)
+        }
     }
     
     fun getCurrentLevel(context: Context): Int {
@@ -25,7 +28,9 @@ object GamePreferences {
     }
     
     fun saveTotalTime(context: Context, time: Long) {
-        getPrefs(context).edit().putLong(KEY_TOTAL_TIME, time).apply()
+        getPrefs(context).edit {
+            putLong(KEY_TOTAL_TIME, time)
+        }
     }
     
     fun getTotalTime(context: Context): Long {
@@ -33,7 +38,9 @@ object GamePreferences {
     }
     
     fun saveTotalAttempts(context: Context, attempts: Int) {
-        getPrefs(context).edit().putInt(KEY_TOTAL_ATTEMPTS, attempts).apply()
+        getPrefs(context).edit {
+            putInt(KEY_TOTAL_ATTEMPTS, attempts)
+        }
     }
     
     fun getTotalAttempts(context: Context): Int {
@@ -41,17 +48,17 @@ object GamePreferences {
     }
     
     fun saveLevelScore(context: Context, level: Int, time: Long, attempts: Int) {
-        val editor = getPrefs(context).edit()
         val currentBestTime = getLevelBestTime(context, level)
         
-        // Save if it's a new record or first completion
-        if (currentBestTime == 0L || time < currentBestTime) {
-            editor.putLong(KEY_BEST_TIME_PREFIX + level, time)
-            editor.putInt(KEY_BEST_ATTEMPTS_PREFIX + level, attempts)
+        getPrefs(context).edit {
+            // Save if it's a new record or first completion
+            if (currentBestTime == 0L || time < currentBestTime) {
+                putLong(KEY_BEST_TIME_PREFIX + level, time)
+                putInt(KEY_BEST_ATTEMPTS_PREFIX + level, attempts)
+            }
+            
+            putBoolean(KEY_LEVEL_COMPLETED_PREFIX + level, true)
         }
-        
-        editor.putBoolean(KEY_LEVEL_COMPLETED_PREFIX + level, true)
-        editor.apply()
     }
     
     fun getLevelBestTime(context: Context, level: Int): Long {
@@ -83,6 +90,8 @@ object GamePreferences {
     }
     
     fun resetProgress(context: Context) {
-        getPrefs(context).edit().clear().apply()
+        getPrefs(context).edit {
+            clear()
+        }
     }
 }

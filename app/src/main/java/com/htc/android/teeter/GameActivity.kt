@@ -1,21 +1,20 @@
 package com.htc.android.teeter
 
-import android.content.Context
 import android.content.Intent
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.os.Bundle
-import android.view.View
 import android.view.WindowManager
-import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.htc.android.teeter.game.GameView
 import com.htc.android.teeter.models.GameState
 import com.htc.android.teeter.utils.GamePreferences
 import com.htc.android.teeter.utils.LevelParser
+import java.util.Locale
 
 class GameActivity : AppCompatActivity() {
     
@@ -69,6 +68,35 @@ class GameActivity : AppCompatActivity() {
         gameState.totalTime = GamePreferences.getTotalTime(this)
         gameState.totalAttempts = GamePreferences.getTotalAttempts(this)
         loadLevel(savedLevel)
+        
+        // Handle back press
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                AlertDialog.Builder(this@GameActivity)
+                    .setTitle(R.string.menu_title)
+                    .setMessage(R.string.str_msg_quit)
+                    .setPositiveButton(R.string.str_btn_yes) { _, _ ->
+                        finish()
+                    }
+                    .setNegativeButton(R.string.str_btn_no, null)
+                    .setNeutralButton(R.string.reset_progress_button) { _, _ ->
+                        AlertDialog.Builder(this@GameActivity)
+                            .setTitle(R.string.reset_progress_title)
+                            .setMessage(R.string.reset_progress_message)
+                            .setPositiveButton(R.string.yes) { _, _ ->
+                                GamePreferences.resetProgress(this@GameActivity)
+                                gameState.currentLevel = 0
+                                gameState.totalTime = 0
+                                gameState.totalAttempts = 0
+                                loadLevel(1)
+                                Toast.makeText(this@GameActivity, R.string.progress_reset_toast, Toast.LENGTH_SHORT).show()
+                            }
+                            .setNegativeButton(R.string.cancel, null)
+                            .show()
+                    }
+                    .show()
+            }
+        })
     }
     
     private fun loadLevel(levelNumber: Int) {
@@ -77,7 +105,7 @@ class GameActivity : AppCompatActivity() {
             gameState.startLevel(levelNumber)
             gameView.setLevel(level)
         } else {
-            Toast.makeText(this, "Level $levelNumber not found", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.level_not_found, levelNumber), Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -86,16 +114,16 @@ class GameActivity : AppCompatActivity() {
             val dialogView = layoutInflater.inflate(R.layout.dialog_level_complete, null)
             
             dialogView.findViewById<TextView>(R.id.levelCompletedTitle).text = 
-                "Level ${gameState.currentLevel} Completed"
+                getString(R.string.level_completed, gameState.currentLevel)
             
             val levelTime = gameState.getLevelTime()
             val levelSeconds = (levelTime / 1000) % 60
             val levelMinutes = (levelTime / 60000) % 60
             val levelHours = (levelTime / 3600000)
             val levelTimeStr = if (levelHours > 0) {
-                String.format("%d:%02d:%02d", levelHours, levelMinutes, levelSeconds)
+                String.format(Locale.getDefault(), "%d:%02d:%02d", levelHours, levelMinutes, levelSeconds)
             } else {
-                String.format("%d:%02d:%02d", levelMinutes / 60, levelMinutes % 60, levelSeconds)
+                String.format(Locale.getDefault(), "%d:%02d:%02d", levelMinutes / 60, levelMinutes % 60, levelSeconds)
             }
             dialogView.findViewById<TextView>(R.id.levelTimeText).text = levelTimeStr
             dialogView.findViewById<TextView>(R.id.levelAttemptsText).text = 
@@ -107,9 +135,9 @@ class GameActivity : AppCompatActivity() {
             val totalMinutes = (totalTime / 60000) % 60
             val totalHours = (totalTime / 3600000)
             val totalTimeStr = if (totalHours > 0) {
-                String.format("%d:%02d:%02d", totalHours, totalMinutes, totalSeconds)
+                String.format(Locale.getDefault(), "%d:%02d:%02d", totalHours, totalMinutes, totalSeconds)
             } else {
-                String.format("%d:%02d:%02d", totalMinutes / 60, totalMinutes % 60, totalSeconds)
+                String.format(Locale.getDefault(), "%d:%02d:%02d", totalMinutes / 60, totalMinutes % 60, totalSeconds)
             }
             dialogView.findViewById<TextView>(R.id.totalTimeText).text = totalTimeStr
             dialogView.findViewById<TextView>(R.id.totalAttemptsText).text = 
@@ -172,7 +200,7 @@ class GameActivity : AppCompatActivity() {
                 finish()
             } catch (e: Exception) {
                 e.printStackTrace()
-                Toast.makeText(this, "Error loading score screen: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, getString(R.string.error_loading_score, e.message ?: "Unknown error"), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -193,31 +221,5 @@ class GameActivity : AppCompatActivity() {
     
     override fun onDestroy() {
         super.onDestroy()
-    }
-    
-    override fun onBackPressed() {
-        AlertDialog.Builder(this)
-            .setTitle("Menu")
-            .setMessage(R.string.str_msg_quit)
-            .setPositiveButton(R.string.str_btn_yes) { _, _ ->
-                onBackPressedDispatcher.onBackPressed()
-            }
-            .setNegativeButton(R.string.str_btn_no, null)
-            .setNeutralButton("Reset Progress") { _, _ ->
-                AlertDialog.Builder(this)
-                    .setTitle("Reset Progress")
-                    .setMessage("Are you sure you want to reset all progress and start from Level 1?")
-                    .setPositiveButton("Yes") { _, _ ->
-                        GamePreferences.resetProgress(this)
-                        gameState.currentLevel = 0
-                        gameState.totalTime = 0
-                        gameState.totalAttempts = 0
-                        loadLevel(1)
-                        Toast.makeText(this, "Progress reset to Level 1", Toast.LENGTH_SHORT).show()
-                    }
-                    .setNegativeButton("Cancel", null)
-                    .show()
-            }
-            .show()
     }
 }

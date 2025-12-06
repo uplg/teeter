@@ -18,6 +18,18 @@
     <string name="str_total_time">Total Time:</string>
     <string name="str_total_attempt">Total Attempts:</string>
     <string name="str_rank_caption">Congratulations!</string>
+    <string name="congratulations_rank">Congratulations!\nRank: %s</string>
+    <string name="menu_title">Menu</string>
+    <string name="menu_message">What would you like to do?</string>
+    <string name="reset_progress_title">Reset Progress</string>
+    <string name="reset_progress_message">Are you sure you want to reset all progress and start from Level 1?</string>
+    <string name="progress_reset_toast">Progress reset to Level 1</string>
+    <string name="cancel">Cancel</string>
+    <string name="reset_progress_button">Reset Progress</string>
+    <string name="level_completed">Level %d Completed</string>
+    <string name="level_not_found">Level %d not found</string>
+    <string name="error_loading_score">Error loading score screen: %s</string>
+    <string name="yes">Yes</string>
     <string name="str_no_sensor">No accelerometer sensor found!</string>
     <string name="ap_prot_err">Protection error</string>
 </resources>

@@ -8,15 +8,17 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.media.AudioAttributes
 import android.media.SoundPool
+import android.os.Build
+import android.os.VibrationEffect
 import android.os.Vibrator
+import android.os.VibratorManager
 import android.util.AttributeSet
-import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import androidx.core.graphics.scale
+import androidx.core.graphics.withSave
 import com.htc.android.teeter.R
-import com.htc.android.teeter.models.Hole
 import com.htc.android.teeter.models.Level
-import com.htc.android.teeter.models.Wall
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -26,10 +28,6 @@ class GameView @JvmOverloads constructor(
 ) : SurfaceView(context, attrs), SurfaceHolder.Callback, SensorEventListener {
 
     private var gameThread: GameThread? = null
-    private val paint = Paint().apply {
-        isAntiAlias = true
-        isFilterBitmap = true
-    }
     
     // Game state
     private var level: Level? = null
@@ -65,7 +63,13 @@ class GameView @JvmOverloads constructor(
     private val soundPool: SoundPool
     private var holeSound = 0
     private var levelCompleteSound = 0
-    private val vibrator: Vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    private val vibrator: Vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+        vibratorManager.defaultVibrator
+    } else {
+        @Suppress("DEPRECATION")
+        context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    }
     
     // Bitmaps
     private var ballBitmap: Bitmap? = null
@@ -258,7 +262,12 @@ class GameView @JvmOverloads constructor(
         // Play sound
         when (type) {
             AnimationType.HOLE_FALL -> {
-                vibrator.vibrate(300)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator.vibrate(300)
+                }
                 soundPool.play(holeSound, 1f, 1f, 1, 0, 1f)
             }
             AnimationType.GOAL_SUCCESS -> {
@@ -394,7 +403,7 @@ class GameView @JvmOverloads constructor(
         
         // Draw maze background
         mazeBitmap?.let {
-            val scaledBitmap = Bitmap.createScaledBitmap(it, width, height, true)
+            val scaledBitmap = it.scale(width, height)
             val mazePaint = Paint().apply {
                 isAntiAlias = true
                 isFilterBitmap = true
@@ -425,11 +434,11 @@ class GameView @JvmOverloads constructor(
                     isFilterBitmap = true
                 }
                 val avgScale = (scaleX + scaleY) / 2f
-                canvas.save()
-                canvas.translate(holeX, holeY)
-                canvas.scale(avgScale, avgScale)
-                canvas.drawBitmap(it, -it.width / 2f, -it.height / 2f, holePaint)
-                canvas.restore()
+                canvas.withSave {
+                    translate(holeX, holeY)
+                    scale(avgScale, avgScale)
+                    drawBitmap(it, -it.width / 2f, -it.height / 2f, holePaint)
+                }
             }
         }
         
@@ -443,18 +452,16 @@ class GameView @JvmOverloads constructor(
                     isFilterBitmap = true
                 }
                 val avgScale = (scaleX + scaleY) / 2f
-                canvas.save()
-                canvas.translate(endX, endY)
-                canvas.scale(avgScale, avgScale)
-                canvas.drawBitmap(bitmap, -bitmap.width / 2f, -bitmap.height / 2f, goalPaint)
-                canvas.restore()
+                canvas.withSave {
+                    translate(endX, endY)
+                    scale(avgScale, avgScale)
+                    drawBitmap(bitmap, -bitmap.width / 2f, -bitmap.height / 2f, goalPaint)
+                }
             }
         }
         
         // Draw ball
         ballBitmap?.let { ball ->
-            canvas.save()
-            
             // Calculate scale for animation
             var scale = 1f
             var alpha = 255
@@ -471,13 +478,14 @@ class GameView @JvmOverloads constructor(
                 this.alpha = alpha
             }
             
-            canvas.translate(ballX, ballY)
-            // Scale ball bitmap to match the scaled radius
-            val avgScale = (scaleX + scaleY) / 2f
-            val finalScale = scale * avgScale
-            canvas.scale(finalScale, finalScale)
-            canvas.drawBitmap(ball, -ball.width / 2f, -ball.height / 2f, ballPaint)
-            canvas.restore()
+            canvas.withSave {
+                translate(ballX, ballY)
+                // Scale ball bitmap to match the scaled radius
+                val avgScale = (scaleX + scaleY) / 2f
+                val finalScale = scale * avgScale
+                scale(finalScale, finalScale)
+                drawBitmap(ball, -ball.width / 2f, -ball.height / 2f, ballPaint)
+            }
         }
     }
     
