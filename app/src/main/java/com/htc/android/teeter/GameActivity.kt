@@ -3,13 +3,20 @@ package com.htc.android.teeter
 import android.content.Intent
 import android.hardware.Sensor
 import android.hardware.SensorManager
+import android.os.Build
 import android.os.Bundle
+import android.view.View
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.htc.android.teeter.game.GameView
 import com.htc.android.teeter.models.GameState
 import com.htc.android.teeter.utils.GamePreferences
@@ -24,6 +31,9 @@ class GameActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Enable edge-to-edge immersive mode (hide system bars)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        
         // Keep screen on
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         
@@ -35,6 +45,9 @@ class GameActivity : AppCompatActivity() {
         }
         
         setContentView(R.layout.activity_game)
+        
+        // Hide system bars for immersive full-screen experience
+        hideSystemBars()
         
         gameView = findViewById(R.id.gameView)
         gameView.keepScreenOn = true
@@ -208,7 +221,15 @@ class GameActivity : AppCompatActivity() {
     
     override fun onResume() {
         super.onResume()
+        hideSystemBars()
         gameView.startSensors()
+    }
+    
+    private fun hideSystemBars() {
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            hide(WindowInsetsCompat.Type.systemBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
     }
     
     override fun onDestroy() {

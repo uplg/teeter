@@ -15,6 +15,7 @@ import android.os.VibratorManager
 import android.util.AttributeSet
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import androidx.core.graphics.get
 import androidx.core.graphics.scale
 import androidx.core.graphics.withSave
 import com.htc.android.teeter.R
@@ -35,9 +36,13 @@ class GameView @JvmOverloads constructor(
     private var ballY = 0f
     private var ballVelocityX = 0f
     private var ballVelocityY = 0f
-    private val baseBallRadius = 12f
-    private var ballRadius = 12f
-    
+    // Current device tilt (from accelerometer)
+    private var currentAccelX = 0f
+    private var currentAccelY = 0f
+    // Radius will be calculated from bitmap dimensions (ball.png)
+    private var baseBallRadius = 40f  // Initial value, updated when bitmap loads
+    private var ballRadius = 40f
+
     // Animation state
     private var isAnimating = false
     private var animationType = AnimationType.NONE
@@ -82,6 +87,14 @@ class GameView @JvmOverloads constructor(
     private val holeAnimFrames = mutableListOf<Bitmap>()
     private val endAnimFrames = mutableListOf<Bitmap>()
     
+    // Bitmap-based radii (will be set after loading resources)
+    private var baseHoleRadius = 33f  // hole.png is 66x66
+    private var baseEndRadius = 40f   // end.png is 80x80
+    
+    // Detection ratios (calculated based on bitmap sizes)
+    private var holeDetectionRatio = 1f
+    private var goalDetectionRatio = 1f
+    
     // Game callbacks
     var onLevelComplete: (() -> Unit)? = null
     var onFallInHole: (() -> Unit)? = null
@@ -111,6 +124,42 @@ class GameView @JvmOverloads constructor(
         loadResources()
     }
     
+    /**
+     * Calculate the visible radius of a bitmap by detecting non-transparent pixels
+     * from the center outward. This ensures collision detection matches visual appearance.
+     */
+    private fun calculateVisibleRadius(bitmap: Bitmap): Float {
+        val centerX = bitmap.width / 2
+        val centerY = bitmap.height / 2
+        var maxOpaqueRadius = 0f
+        
+        // Check pixels in a circle from center, find furthest opaque pixel
+        val maxCheckRadius = minOf(bitmap.width, bitmap.height) / 2
+        
+        for (angle in 0 until 360 step 5) {
+            val radians = Math.toRadians(angle.toDouble())
+            
+            for (r in 0..maxCheckRadius) {
+                val x = centerX + (r * kotlin.math.cos(radians)).toInt()
+                val y = centerY + (r * kotlin.math.sin(radians)).toInt()
+                
+                if (x !in 0 until bitmap.width || y !in 0 until bitmap.height) break
+                
+                val pixel = bitmap[x, y]
+                val alpha = (pixel shr 24) and 0xff
+                
+                // If mostly opaque (alpha > 128), update max radius
+                if (alpha > 128) {
+                    val distance = sqrt(((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY)).toFloat())
+                    maxOpaqueRadius = maxOf(maxOpaqueRadius, distance)
+                }
+            }
+        }
+        
+        // Return calculated radius, or default to 30% of bitmap width as safe fallback
+        return if (maxOpaqueRadius > 0) maxOpaqueRadius else bitmap.width * 0.3f
+    }
+    
     private fun loadResources() {
         try {
             val options = BitmapFactory.Options().apply {
@@ -121,6 +170,26 @@ class GameView @JvmOverloads constructor(
             ballBitmap = BitmapFactory.decodeResource(resources, R.drawable.ball, options)
             holeBitmap = BitmapFactory.decodeResource(resources, R.drawable.hole, options)
             endBitmap = BitmapFactory.decodeResource(resources, R.drawable.end, options)
+            
+            // Calculate base radii by detecting actual visible (non-transparent) pixels
+            ballBitmap?.let { baseBallRadius = calculateVisibleRadius(it) }
+            holeBitmap?.let { baseHoleRadius = calculateVisibleRadius(it) }
+            endBitmap?.let { baseEndRadius = calculateVisibleRadius(it) }
+            
+            // Simple and logical approach:
+            // - Hole bitmap is 66x66 (radius 33px)
+            // - Goal bitmap is 80x80 (radius 40px)
+            // - Use a percentage of these VISUAL sizes for detection
+            //
+            // holeDetectionRatio: what fraction of the hole's visual size counts as "catchable"
+            // goalDetectionRatio: what fraction of the goal's visual size counts as "reachable"
+            //
+            // Example: 0.3 means use 30% of the hole's radius for collision
+            // If hole visual radius is 33px, effective radius = 33 * 0.3 = 9.9px
+            //
+            holeDetectionRatio = 0.50f  // Hole catches at 50% of its visual size
+            goalDetectionRatio = 0.50f  // Goal catches at 50% of its visual size (easier)
+            
             wallBitmap = BitmapFactory.decodeResource(resources, R.drawable.wall, options)
             mazeBitmap = BitmapFactory.decodeResource(resources, R.drawable.maze, options)
             shadowBitmap = BitmapFactory.decodeResource(resources, R.drawable.shadow, options)
@@ -191,14 +260,19 @@ class GameView @JvmOverloads constructor(
     }
     
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        scaleX = width / originalWidth
-        scaleY = height / originalHeight
+        // Use actual drawing area dimensions from the holder
+        // This accounts for system bars and gives us the real playable area
+        val actualWidth = holder.surfaceFrame.width().toFloat()
+        val actualHeight = holder.surfaceFrame.height().toFloat()
+        
+        scaleX = actualWidth / originalWidth
+        scaleY = actualHeight / originalHeight
         // Scale ball radius proportionally to screen size
         val avgScale = (scaleX + scaleY) / 2f
         ballRadius = baseBallRadius * avgScale
         // Pre-scale maze bitmap once to avoid doing it every frame
         mazeBitmap?.let {
-            scaledMazeBitmap = it.scale(width, height)
+            scaledMazeBitmap = it.scale(actualWidth.toInt(), actualHeight.toInt())
         }
         resetBall()
     }
@@ -220,11 +294,11 @@ class GameView @JvmOverloads constructor(
     override fun onSensorChanged(event: SensorEvent) {
         if (event.sensor.type == Sensor.TYPE_ACCELEROMETER) {
             // Apply acceleration for landscape orientation
-            val accelX = event.values[1]
-            val accelY = event.values[0]
+            currentAccelX = event.values[1]
+            currentAccelY = event.values[0]
             
-            ballVelocityX += accelX * 0.5f
-            ballVelocityY += accelY * 0.5f
+            ballVelocityX += currentAccelX * 0.5f
+            ballVelocityY += currentAccelY * 0.5f
             
             // Apply friction
             ballVelocityX *= 0.98f
@@ -251,15 +325,20 @@ class GameView @JvmOverloads constructor(
             return
         }
         
+        // Apply hole gravity (attracts ball when nearby)
+        applyHoleGravity()
+        
         // Update ball position
+        val oldBallX = ballX
+        val oldBallY = ballY
         ballX += ballVelocityX
         ballY += ballVelocityY
         
         // Check wall collisions
         checkWallCollisions()
         
-        // Check holes
-        val holeResult = checkHoleCollisions()
+        // Check holes (use continuous collision detection to prevent tunneling)
+        val holeResult = checkHoleCollisions(oldBallX, oldBallY)
         if (holeResult.first) {
             startAnimation(AnimationType.HOLE_FALL, holeResult.second.first, holeResult.second.second)
             return
@@ -355,34 +434,64 @@ class GameView @JvmOverloads constructor(
             val right = wall.right * scaleX
             val bottom = wall.bottom * scaleY
             
-            // Simple rectangle collision
-            if (ballX + ballRadius > left && ballX - ballRadius < right &&
-                ballY + ballRadius > top && ballY - ballRadius < bottom) {
+            // Circle-rectangle collision detection
+            // Find the closest point on the rectangle to the circle center
+            val closestX = ballX.coerceIn(left, right)
+            val closestY = ballY.coerceIn(top, bottom)
+            
+            // Calculate distance from circle center to this closest point
+            val distanceX = ballX - closestX
+            val distanceY = ballY - closestY
+            val distanceSquared = distanceX * distanceX + distanceY * distanceY
+            
+            // Check if circle intersects rectangle
+            if (distanceSquared < ballRadius * ballRadius) {
+                // Collision detected - push ball out in the direction of least penetration
+                val distance = sqrt(distanceSquared)
                 
-                // Determine collision side and adjust
-                val overlapLeft = ballX + ballRadius - left
-                val overlapRight = right - (ballX - ballRadius)
-                val overlapTop = ballY + ballRadius - top
-                val overlapBottom = bottom - (ballY - ballRadius)
-                
-                val minOverlap = minOf(overlapLeft, overlapRight, overlapTop, overlapBottom)
-                
-                when (minOverlap) {
-                    overlapLeft -> {
-                        ballX = left - ballRadius
+                if (distance > 0) {
+                    // Push ball away from the closest point
+                    val penetration = ballRadius - distance
+                    val pushX = (distanceX / distance) * penetration
+                    val pushY = (distanceY / distance) * penetration
+                    
+                    ballX += pushX
+                    ballY += pushY
+                    
+                    // Apply velocity dampening based on collision angle
+                    // If hitting mostly horizontally, reduce horizontal velocity
+                    if (abs(distanceX) > abs(distanceY)) {
                         ballVelocityX = -ballVelocityX * 0.5f
-                    }
-                    overlapRight -> {
-                        ballX = right + ballRadius
-                        ballVelocityX = -ballVelocityX * 0.5f
-                    }
-                    overlapTop -> {
-                        ballY = top - ballRadius
+                    } else {
                         ballVelocityY = -ballVelocityY * 0.5f
                     }
-                    overlapBottom -> {
-                        ballY = bottom + ballRadius
-                        ballVelocityY = -ballVelocityY * 0.5f
+                } else {
+                    // Ball center is exactly on closest point (edge case)
+                    // Determine which edge and push out
+                    val distToLeft = ballX - left
+                    val distToRight = right - ballX
+                    val distToTop = ballY - top
+                    val distToBottom = bottom - ballY
+                    
+                    val minDist = minOf(distToLeft, distToRight, distToTop, distToBottom)
+                    
+                    when (minDist) {
+                        distToLeft -> {
+                            ballX = left - ballRadius
+                            ballVelocityX = -ballVelocityX * 0.5f
+                        }
+                        distToRight -> {
+                            ballX = right + ballRadius
+                            ballVelocityX = -ballVelocityX * 0.5f
+                        }
+                        distToTop -> {
+                            ballY = top - ballRadius
+                            ballVelocityY = -ballVelocityY * 0.5f
+                        }
+                        distToBottom -> {
+                            ballY = bottom + ballRadius
+                            ballVelocityY = -ballVelocityY * 0.5f
+                        }
                     }
                 }
             }
@@ -407,18 +516,84 @@ class GameView @JvmOverloads constructor(
         }
     }
     
-    private fun checkHoleCollisions(): Pair<Boolean, Pair<Float, Float>> {
+    private fun checkHoleCollisions(oldBallX: Float = ballX, oldBallY: Float = ballY): Pair<Boolean, Pair<Float, Float>> {
         level?.holes?.forEach { hole ->
             val holeX = hole.x * scaleX
             val holeY = hole.y * scaleY
-            val distance = sqrt((ballX - holeX) * (ballX - holeX) + (ballY - holeY) * (ballY - holeY))
             val avgScale = (scaleX + scaleY) / 2f
-            val holeRadius = 20f * avgScale // Scaled hole detection radius
-            if (distance < ballRadius + holeRadius) {
+            val holeEffectiveRadius = baseHoleRadius * avgScale * holeDetectionRatio
+            val ballCollisionRadius = ballRadius * 0.35f
+            
+            // Check collision at current position
+            val distance = sqrt((ballX - holeX) * (ballX - holeX) + (ballY - holeY) * (ballY - holeY))
+            if (distance < ballCollisionRadius + holeEffectiveRadius) {
                 return Pair(true, Pair(holeX, holeY))
+            }
+            
+            // Also check if ball path crossed the hole (continuous collision detection)
+            // This prevents fast-moving balls from tunneling through holes
+            if (oldBallX != ballX || oldBallY != ballY) {
+                val closestPoint = getClosestPointOnSegment(oldBallX, oldBallY, ballX, ballY, holeX, holeY)
+                val distanceToPath = sqrt(
+                    (closestPoint.first - holeX) * (closestPoint.first - holeX) + 
+                    (closestPoint.second - holeY) * (closestPoint.second - holeY)
+                )
+                if (distanceToPath < ballCollisionRadius + holeEffectiveRadius) {
+                    return Pair(true, Pair(holeX, holeY))
+                }
             }
         }
         return Pair(false, Pair(0f, 0f))
+    }
+    
+    // Helper function to find closest point on a line segment to a point
+    private fun getClosestPointOnSegment(x1: Float, y1: Float, x2: Float, y2: Float, px: Float, py: Float): Pair<Float, Float> {
+        val dx = x2 - x1
+        val dy = y2 - y1
+        val lengthSquared = dx * dx + dy * dy
+        
+        if (lengthSquared == 0f) {
+            return Pair(x1, y1)
+        }
+        
+        val t = ((px - x1) * dx + (py - y1) * dy) / lengthSquared
+        val clampedT = t.coerceIn(0f, 1f)
+        
+        return Pair(x1 + clampedT * dx, y1 + clampedT * dy)
+    }
+    
+    private fun applyHoleGravity() {
+        level?.holes?.forEach { hole ->
+            val holeX = hole.x * scaleX
+            val holeY = hole.y * scaleY
+            val dx = holeX - ballX
+            val dy = holeY - ballY
+            val distance = sqrt(dx * dx + dy * dy)
+            
+            // Apply gravity when ball is near hole
+            val gravityRadius = ballRadius * 3f
+            
+            if (distance > 0 && distance < gravityRadius) {
+                // Calculate device tilt magnitude (how much the device is tilted)
+                val tiltMagnitude = sqrt(currentAccelX * currentAccelX + currentAccelY * currentAccelY)
+                
+                // Gravity is stronger when device is flat (less tilt), weaker when tilted
+                // Max tilt is ~10 (full tilt), so normalize to 0-1 range
+                val tiltFactor = (1f - (tiltMagnitude / 10f).coerceIn(0f, 1f))
+                
+                // Base gravity strength modulated by distance and tilt
+                val normalizedDistance = distance / gravityRadius
+                val baseStrength = 0.5f * (1f - normalizedDistance) * (1f - normalizedDistance)
+                val gravityStrength = baseStrength * tiltFactor
+                
+                // Apply force towards hole center
+                val normalizedDx = dx / distance
+                val normalizedDy = dy / distance
+                
+                ballVelocityX += normalizedDx * gravityStrength
+                ballVelocityY += normalizedDy * gravityStrength
+            }
+        }
     }
     
     private fun checkGoal(): Pair<Boolean, Pair<Float, Float>> {
@@ -427,8 +602,12 @@ class GameView @JvmOverloads constructor(
             val endY = it.endY * scaleY
             val distance = sqrt((ballX - endX) * (ballX - endX) + (ballY - endY) * (ballY - endY))
             val avgScale = (scaleX + scaleY) / 2f
-            val goalRadius = 25f * avgScale // Scaled goal detection radius
-            if (distance < ballRadius + goalRadius) {
+            // Circle-circle collision: goal reached when edges touch/overlap
+            val goalEffectiveRadius = baseEndRadius * avgScale * goalDetectionRatio
+            // Use 35% of ball's visual radius for goal collision
+            val ballCollisionRadius = ballRadius * 0.35f
+            // Goal reached when: distance between centers < (ballCollisionRadius + goalEffectiveRadius)
+            if (distance < ballCollisionRadius + goalEffectiveRadius) {
                 return Pair(true, Pair(endX, endY))
             }
         }
@@ -549,7 +728,7 @@ class GameView @JvmOverloads constructor(
         if (isAnimating) {
             when (animationType) {
                 AnimationType.HOLE_FALL -> {
-                    // Draw hole animation frames (scaled)
+                    // Draw hole animation frames at the hole position
                     if (holeAnimFrames.isNotEmpty()) {
                         val frameIndex = (animationProgress * holeAnimFrames.size).toInt()
                             .coerceIn(0, holeAnimFrames.size - 1)
@@ -560,11 +739,13 @@ class GameView @JvmOverloads constructor(
                             isFilterBitmap = true
                         }
                         val avgScale = (scaleX + scaleY) / 2f
-                        // Scale to match ball size approximately
-                        val animScale = (ballRadius * 2f) / frame.width
+                        // Animation frame should match the hole bitmap size (66px)
+                        // holeBitmap is 66x66, animation frames are larger, so scale down
+                        val targetSize = (holeBitmap?.width?.toFloat() ?: 66f) * avgScale
+                        val animScale = targetSize / frame.width
                         canvas.withSave {
-                            translate(ballX, ballY)
-                            scale(avgScale * animScale, avgScale * animScale)
+                            translate(animationTargetX, animationTargetY)
+                            scale(animScale, animScale)
                             drawBitmap(frame, -frame.width / 2f, -frame.height / 2f, framePaint)
                         }
                     }
