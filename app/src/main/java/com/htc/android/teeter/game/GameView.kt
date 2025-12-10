@@ -199,7 +199,6 @@ class GameView @JvmOverloads constructor(
             // These values ensure:
             // - Ball can pass through minimum clearance (62.2px) with 10% safety margin
             // - Hole collision feels natural (30% of hole's depth)
-            // - Goal is more forgiving than holes (55% vs 30%)
             holeDetectionRatio = HOLE_DETECTION_RATIO
             goalDetectionRatio = GOAL_DETECTION_RATIO
             
@@ -382,7 +381,6 @@ class GameView @JvmOverloads constructor(
         ballVelocityX = 0f
         ballVelocityY = 0f
         
-        // Play sound
         when (type) {
             AnimationType.HOLE_FALL -> {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -422,7 +420,6 @@ class GameView @JvmOverloads constructor(
             val completedType = animationType
             animationType = AnimationType.NONE
             
-            // Execute callbacks AFTER resetting animation state
             when (completedType) {
                 AnimationType.HOLE_FALL -> {
                     resetBall()
@@ -535,7 +532,6 @@ class GameView @JvmOverloads constructor(
             val holeY = hole.y * scaleY
             val avgScale = (scaleX + scaleY) / 2f
             val holeEffectiveRadius = baseHoleRadius * avgScale * holeDetectionRatio
-            // Ball collision radius for holes: 85% of visual radius (must be well-centered to fall)
             val ballCollisionRadius = ballRadius * BALL_HOLE_COLLISION_RATIO
             
             // Check collision at current position
