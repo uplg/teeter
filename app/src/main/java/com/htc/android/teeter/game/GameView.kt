@@ -24,15 +24,7 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
- * Physics constants derived from rigorous analysis of game assets and level geometry.
- * 
- * Analysis methodology:
- * 1. Analyzed all 32 level XML files to find minimum clearance (62.2px)
- * 2. Detected actual visible radii from bitmap pixel data
- * 3. Calculated collision ratios to ensure ball can pass through tightest gaps
- * 4. Added 10% safety margin for gameplay forgiveness
- * 
- * These values replace all arbitrary "magic numbers" with scientifically derived constants.
+ * Physics constants derived from analysis of game assets and level geometry.
  */
 private const val BALL_COLLISION_RATIO = 1.152f  // Ball uses 115% of visual radius for collision (includes solid core)
 private const val BALL_HOLE_COLLISION_RATIO = 0.5f  // Ball uses 50% of visual radius for hole collision (must be well-centered)
@@ -207,10 +199,6 @@ class GameView @JvmOverloads constructor(
             holeBitmap?.let { baseHoleRadius = calculateVisibleRadius(it) }
             endBitmap?.let { baseEndRadius = calculateVisibleRadius(it) }
             
-            // Use scientifically derived ratios from level geometry analysis
-            // These values ensure:
-            // - Ball can pass through minimum clearance (62.2px) with 10% safety margin
-            // - Hole collision feels natural (30% of hole's depth)
             holeDetectionRatio = HOLE_DETECTION_RATIO
             goalDetectionRatio = GOAL_DETECTION_RATIO
             
@@ -377,7 +365,6 @@ class GameView @JvmOverloads constructor(
     }
     
     private fun startAnimation(type: AnimationType, targetX: Float, targetY: Float) {
-        // Prevent starting a new animation if one is already running
         if (isAnimating) return
         
         isAnimating = true
