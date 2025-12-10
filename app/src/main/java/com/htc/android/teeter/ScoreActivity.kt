@@ -17,6 +17,16 @@ class ScoreActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_score)
         
+        // Ensure ScrollView starts at top and is focusable/scrollable immediately
+        findViewById<android.widget.ScrollView>(R.id.score_scroll_view)?.apply {
+            post {
+                scrollTo(0, 0)
+                requestFocus()
+            }
+            isFocusable = true
+            isFocusableInTouchMode = true
+        }
+        
         val totalTime = intent.getLongExtra("totalTime", 0)
         val totalAttempts = intent.getIntExtra("totalAttempts", 0)
         

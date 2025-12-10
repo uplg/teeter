@@ -61,15 +61,16 @@ class GameActivity : AppCompatActivity() {
             gameState.retry()
         }
         
-        // DEBUG: Long press on GameView to skip to last level
+        // DEBUG: Long press on GameView to skip to level
+        // val level = 32
         // gameView.setOnLongClickListener {
         //     AlertDialog.Builder(this)
         //         .setTitle("Debug")
-        //         .setMessage("Skip to last level (32)?")
+        //         .setMessage("Skip to level ($level)?")
         //         .setPositiveButton("Yes") { _, _ ->
-        //             GamePreferences.saveCurrentLevel(this, 32)
-        //             loadLevel(32)
-        //             Toast.makeText(this, "Jumped to Level 32", Toast.LENGTH_SHORT).show()
+        //             GamePreferences.saveCurrentLevel(this, level)
+        //             loadLevel(level)
+        //             Toast.makeText(this, "Jumped to Level $level", Toast.LENGTH_SHORT).show()
         //         }
         //         .setNegativeButton("Cancel", null)
         //         .show()
