@@ -44,9 +44,6 @@ private const val MAX_VIBRATION_AMPLITUDE = 200  // Maximum vibration intensity
 
 // Wall rendering constants
 private const val WALL_THICKNESS_MULTIPLIER = 1.5f  // Multiplier for wall thickness (1.0 = original size, 2.0 = double thickness)
-private const val WALL_TEXTURE_BRIGHTNESS = 1f  // Brightness multiplier for wall texture (0.0 to 1.0)
-private const val WALL_SHADOW_OPACITY = 100  // Shadow opacity (0-255)
-private const val WALL_SHADOW_OFFSET = 2f  // Shadow offset in scaled pixels
 
 class GameView @JvmOverloads constructor(
     context: Context,
@@ -300,14 +297,7 @@ class GameView @JvmOverloads constructor(
             val scaledSize = (wall.width * avgScale).toInt().coerceAtLeast(1)
             scaledWallTexture?.recycle()
             
-            // Use high quality scaling to preserve texture details
-            val options = BitmapFactory.Options().apply {
-                inScaled = false
-                inPreferredConfig = Bitmap.Config.ARGB_8888
-                inDither = false
-            }
-            
-            scaledWallTexture = Bitmap.createScaledBitmap(wall, scaledSize, scaledSize, true)
+            scaledWallTexture = wall.scale(scaledSize, scaledSize, true)
             
             // Create shader - use MIRROR mode to hide repetition seams from JPEG artifacts
             wallShader = BitmapShader(scaledWallTexture!!, Shader.TileMode.MIRROR, Shader.TileMode.MIRROR)
@@ -769,7 +759,7 @@ class GameView @JvmOverloads constructor(
             
             shader.setLocalMatrix(null)
             
-            // FIRST PASS: Draw ALL blurred shadows for natural 3D relief
+            // Draw ALL blurred shadows for natural 3D relief
             level?.walls?.forEach { wall ->
                 val scaledLeft = wall.left * scaleX
                 val scaledTop = wall.top * scaleY
@@ -787,7 +777,7 @@ class GameView @JvmOverloads constructor(
                 canvas.drawRect(left, top, right, bottom, shadowPaint)
             }
             
-            // SECOND PASS: Draw ALL walls on top (they merge seamlessly)
+            // Draw ALL walls on top (they merge seamlessly)
             level?.walls?.forEach { wall ->
                 val scaledLeft = wall.left * scaleX
                 val scaledTop = wall.top * scaleY
