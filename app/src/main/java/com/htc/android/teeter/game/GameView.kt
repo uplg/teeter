@@ -42,6 +42,12 @@ private const val MAX_VIBRATION_MS = 100L  // Maximum vibration duration (hard i
 private const val MIN_VIBRATION_AMPLITUDE = 20  // Minimum vibration intensity (0-255)
 private const val MAX_VIBRATION_AMPLITUDE = 200  // Maximum vibration intensity
 
+// Wall rendering constants
+private const val WALL_THICKNESS_MULTIPLIER = 1.5f  // Multiplier for wall thickness (1.0 = original size, 2.0 = double thickness)
+private const val WALL_TEXTURE_BRIGHTNESS = 1f  // Brightness multiplier for wall texture (0.0 to 1.0)
+private const val WALL_SHADOW_OPACITY = 100  // Shadow opacity (0-255)
+private const val WALL_SHADOW_OFFSET = 2f  // Shadow offset in scaled pixels
+
 class GameView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
@@ -104,6 +110,8 @@ class GameView @JvmOverloads constructor(
     private var holeBitmap: Bitmap? = null
     private var endBitmap: Bitmap? = null
     private var wallBitmap: Bitmap? = null
+    private var scaledWallTexture: Bitmap? = null // Cached scaled wall texture
+    private var wallShader: BitmapShader? = null // Cached shader for walls
     private var mazeBitmap: Bitmap? = null
     private var scaledMazeBitmap: Bitmap? = null // Cached scaled version
     private var shadowBitmap: Bitmap? = null
@@ -285,6 +293,24 @@ class GameView @JvmOverloads constructor(
         // Pre-scale maze bitmap once to avoid doing it every frame
         mazeBitmap?.let {
             scaledMazeBitmap = it.scale(actualWidth.toInt(), actualHeight.toInt())
+        }
+        // Pre-scale wall texture to match screen resolution
+        wallBitmap?.let { wall ->
+            // Scale texture with careful handling to minimize JPEG artifacts
+            val scaledSize = (wall.width * avgScale).toInt().coerceAtLeast(1)
+            scaledWallTexture?.recycle()
+            
+            // Use high quality scaling to preserve texture details
+            val options = BitmapFactory.Options().apply {
+                inScaled = false
+                inPreferredConfig = Bitmap.Config.ARGB_8888
+                inDither = false
+            }
+            
+            scaledWallTexture = Bitmap.createScaledBitmap(wall, scaledSize, scaledSize, true)
+            
+            // Create shader - use MIRROR mode to hide repetition seams from JPEG artifacts
+            wallShader = BitmapShader(scaledWallTexture!!, Shader.TileMode.MIRROR, Shader.TileMode.MIRROR)
         }
         resetBall()
     }
@@ -468,10 +494,20 @@ class GameView @JvmOverloads constructor(
     
     private fun checkWallCollisions() {
         level?.walls?.forEach { wall ->
-            val left = wall.left * scaleX
-            val top = wall.top * scaleY
-            val right = wall.right * scaleX
-            val bottom = wall.bottom * scaleY
+            // Scale wall coordinates from XML
+            val scaledLeft = wall.left * scaleX
+            val scaledTop = wall.top * scaleY
+            val scaledRight = wall.right * scaleX
+            val scaledBottom = wall.bottom * scaleY
+            
+            // Add fixed extra thickness on all sides (multiplier applies to the 10px original wall size)
+            val avgScale = (scaleX + scaleY) / 2f
+            val extraThickness = (5f * avgScale) * (WALL_THICKNESS_MULTIPLIER - 1f)
+            
+            val left = scaledLeft - extraThickness
+            val top = scaledTop - extraThickness
+            val right = scaledRight + extraThickness
+            val bottom = scaledBottom + extraThickness
             
             // Circle-rectangle collision detection
             // Find the closest point on the rectangle to the circle center
@@ -693,45 +729,7 @@ class GameView @JvmOverloads constructor(
             canvas.drawBitmap(it, 0f, 0f, mazePaint)
         }
         
-        // Draw walls with 3D beveled effect
-        val wallPaint = Paint().apply {
-            color = Color.rgb(80, 80, 80)
-            style = Paint.Style.FILL
-            isAntiAlias = true
-            setShadowLayer(6f, 3f, 3f, Color.argb(120, 0, 0, 0))
-        }
-        val highlightPaint = Paint().apply {
-            color = Color.argb(100, 255, 255, 255)
-            style = Paint.Style.STROKE
-            strokeWidth = 2f
-            isAntiAlias = true
-        }
-        val shadowPaint = Paint().apply {
-            color = Color.argb(100, 0, 0, 0)
-            style = Paint.Style.STROKE
-            strokeWidth = 2f
-            isAntiAlias = true
-        }
-        
-        level?.walls?.forEach { wall ->
-            val left = wall.left * scaleX
-            val top = wall.top * scaleY
-            val right = wall.right * scaleX
-            val bottom = wall.bottom * scaleY
-            
-            // Draw main wall surface
-            canvas.drawRect(left, top, right, bottom, wallPaint)
-            
-            // Draw highlight on top and left edges
-            canvas.drawLine(left, top, right, top, highlightPaint)
-            canvas.drawLine(left, top, left, bottom, highlightPaint)
-            
-            // Draw shadow on bottom and right edges
-            canvas.drawLine(left, bottom, right, bottom, shadowPaint)
-            canvas.drawLine(right, top, right, bottom, shadowPaint)
-        }
-        
-        // Draw holes
+        // Draw holes BEFORE walls so they blend naturally underneath
         level?.holes?.forEach { hole ->
             val holeX = hole.x * scaleX
             val holeY = hole.y * scaleY
@@ -746,6 +744,64 @@ class GameView @JvmOverloads constructor(
                     scale(avgScale, avgScale)
                     drawBitmap(it, -it.width / 2f, -it.height / 2f, holePaint)
                 }
+            }
+        }
+        
+        // Draw walls with metallic texture (on top of holes)
+        wallShader?.let { shader ->
+            val avgScale = (scaleX + scaleY) / 2f
+            
+            // Shadow paint with blur for natural depth effect
+            val shadowPaint = Paint().apply {
+                color = Color.argb(180, 0, 0, 0)  // Darker for visibility through blur
+                style = Paint.Style.FILL
+                isAntiAlias = true
+                maskFilter = BlurMaskFilter(8f * avgScale, BlurMaskFilter.Blur.NORMAL)  // Wider blurred shadow
+            }
+            
+            // Wall paint with texture
+            val wallPaint = Paint().apply {
+                this.shader = shader
+                isAntiAlias = false
+                isFilterBitmap = false
+                isDither = false
+            }
+            
+            shader.setLocalMatrix(null)
+            
+            // FIRST PASS: Draw ALL blurred shadows for natural 3D relief
+            level?.walls?.forEach { wall ->
+                val scaledLeft = wall.left * scaleX
+                val scaledTop = wall.top * scaleY
+                val scaledRight = wall.right * scaleX
+                val scaledBottom = wall.bottom * scaleY
+                
+                val extraThickness = (5f * avgScale) * (WALL_THICKNESS_MULTIPLIER - 1f)
+                
+                val left = scaledLeft - extraThickness
+                val top = scaledTop - extraThickness
+                val right = scaledRight + extraThickness
+                val bottom = scaledBottom + extraThickness
+                
+                // Blurred shadow creates natural dispersed depth effect
+                canvas.drawRect(left, top, right, bottom, shadowPaint)
+            }
+            
+            // SECOND PASS: Draw ALL walls on top (they merge seamlessly)
+            level?.walls?.forEach { wall ->
+                val scaledLeft = wall.left * scaleX
+                val scaledTop = wall.top * scaleY
+                val scaledRight = wall.right * scaleX
+                val scaledBottom = wall.bottom * scaleY
+                
+                val extraThickness = (5f * avgScale) * (WALL_THICKNESS_MULTIPLIER - 1f)
+                
+                val left = scaledLeft - extraThickness
+                val top = scaledTop - extraThickness
+                val right = scaledRight + extraThickness
+                val bottom = scaledBottom + extraThickness
+                
+                canvas.drawRect(left, top, right, bottom, wallPaint)
             }
         }
         
