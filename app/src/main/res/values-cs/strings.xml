@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="str_app_name">Teeter</string>
+    <string name="str_msg_continue">Chcete pokračovat ve hře?</string>
+    <string name="str_msg_quit">Chcete skončit?</string>
+    <string name="str_btn_restart">Spustit znovu</string>
+    <string name="str_btn_yes">Ano</string>
+    <string name="str_btn_no">Ne</string>
+    <string name="str_btn_resume">Pokračovat</string>
+    <string name="str_btn_quit">Ukončit</string>
+    <string name="str_level_caption">Úroveň %d dokončena</string>
+    <string name="str_level_time">Čas v úrovni</string>
+    <string name="str_level_attempt">Pokusy v úrovni</string>
+    <string name="str_total_time">Celkový čas</string>
+    <string name="str_total_attempt">Celkový počet pokusů</string>
+    <string name="str_rank_caption">Rekordy</string>
+    <string name="str_no_sensor">Pro hraní hry Teeter je na telefonu nutný G-Sensor (akcelerometr). Váš telefon tuto funkci nemá. Teeter se nyní zavře.</string>
+</resources>

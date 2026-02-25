@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<level>
+    <begin
+        x="1162"
+        y="615"/>
+    <end
+        x="484"
+        y="82"/>
+    <holes count="10">
+        <hole
+            x="96"
+            y="88"/>
+        <hole
+            x="134"
+            y="383"/>
+        <hole
+            x="352"
+            y="432"/>
+        <hole
+            x="567"
+            y="383"/>
+        <hole
+            x="688"
+            y="212"/>
+        <hole
+            x="666"
+            y="59"/>
+        <hole
+            x="414"
+            y="183"/>
+        <hole
+            x="883"
+            y="648"/>
+        <hole
+            x="879"
+            y="435"/>
+        <hole
+            x="1186"
+            y="356"/>
+    </holes>
+    <background no="0"/>
+</level>

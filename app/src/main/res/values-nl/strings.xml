@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="str_app_name">Teeter</string>
+    <string name="str_msg_continue">Wil je verder spelen?</string>
+    <string name="str_msg_quit">Wil je stoppen?</string>
+    <string name="str_btn_restart">Opnieuw starten</string>
+    <string name="str_btn_yes">Ja</string>
+    <string name="str_btn_no">Nee</string>
+    <string name="str_btn_resume">Doorgaan</string>
+    <string name="str_btn_quit">Stoppen</string>
+    <string name="str_level_caption">Level %d voltooid</string>
+    <string name="str_level_time">Leveltijd</string>
+    <string name="str_level_attempt">Pogingen per level</string>
+    <string name="str_total_time">Totale tijd</string>
+    <string name="str_total_attempt">Totaal aantal pogingen</string>
+    <string name="str_rank_caption">Highscores</string>
+    <string name="str_no_sensor">Teeter heeft een g-sensor (versnellingsmeter) op de telefoon nodig om af te spelen. Uw telefoon beschikt niet over deze functie. Teeter wordt nu afgesloten.</string>
+</resources>

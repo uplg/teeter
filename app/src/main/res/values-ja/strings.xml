@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="str_app_name">Teeter</string>
+    <string name="str_msg_continue">ゲームを続けますか？</string>
+    <string name="str_msg_quit">終了しますか?</string>
+    <string name="str_btn_restart">リスタート</string>
+    <string name="str_btn_yes">はい</string>
+    <string name="str_btn_no">いいえ</string>
+    <string name="str_btn_resume">再開</string>
+    <string name="str_btn_quit">終了</string>
+    <string name="str_level_caption">レベル %d 完了</string>
+    <string name="str_level_time">レベル時間</string>
+    <string name="str_level_attempt">試行レベル</string>
+    <string name="str_total_time">合計時間</string>
+    <string name="str_total_attempt">試行回数</string>
+    <string name="str_rank_caption">ハイスコア</string>
+    <string name="str_no_sensor">Teeter をプレイするには、電話に G-Sensor (加速度計) が必要です。この電話には、この機能がありません。Teeter は終了します。</string>
+</resources>

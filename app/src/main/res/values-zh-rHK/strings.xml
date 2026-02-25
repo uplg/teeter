@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="str_app_name">Teeter</string>
+    <string name="str_msg_continue">是否要繼續進行遊戲？</string>
+    <string name="str_msg_quit">是否要離開？</string>
+    <string name="str_btn_restart">重新開始</string>
+    <string name="str_btn_yes">是</string>
+    <string name="str_btn_no">否</string>
+    <string name="str_btn_resume">繼續</string>
+    <string name="str_btn_quit">離開</string>
+    <string name="str_level_caption">第 %d 關過關</string>
+    <string name="str_level_time">過關時間</string>
+    <string name="str_level_attempt">闖關次數</string>
+    <string name="str_total_time">總時間</string>
+    <string name="str_total_attempt">總次數</string>
+    <string name="str_rank_caption">排行榜</string>
+    <string name="str_no_sensor">您的電話上必須要有 G-Sensor (加速感測器) 才能玩 Teeter。但由於您的電話沒有此功能，因此 Teeter 即將關閉。</string>
+</resources>

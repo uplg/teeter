@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="str_app_name">Teeter</string>
+    <string name="str_msg_continue">是否继续进行游戏?</string>
+    <string name="str_msg_quit">是否退出?</string>
+    <string name="str_btn_restart">重新开始</string>
+    <string name="str_btn_yes">是</string>
+    <string name="str_btn_no">否</string>
+    <string name="str_btn_resume">继续</string>
+    <string name="str_btn_quit">退出</string>
+    <string name="str_level_caption">第 %d 关</string>
+    <string name="str_level_time">过关时间</string>
+    <string name="str_level_attempt">过关尝试次数</string>
+    <string name="str_total_time">总时间</string>
+    <string name="str_total_attempt">总次数</string>
+    <string name="str_rank_caption">最高得分</string>
+    <string name="str_no_sensor">Teeter 需要手机上装有 G-Sensor (加速度计) 才能播放。您的手机无此功能。Teeter 将关闭。</string>
+</resources>

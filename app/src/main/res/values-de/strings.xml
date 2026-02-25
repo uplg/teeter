@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="str_app_name">Teeter</string>
+    <string name="str_msg_continue">Möchten Sie das Spiel fortsetzen?</string>
+    <string name="str_msg_quit">Möchten Sie das Spielen beenden?</string>
+    <string name="str_btn_restart">Neustart</string>
+    <string name="str_btn_yes">Ja</string>
+    <string name="str_btn_no">Nein</string>
+    <string name="str_btn_resume">Fortsetzen</string>
+    <string name="str_btn_quit">Beenden</string>
+    <string name="str_level_caption">Level %d Beendet</string>
+    <string name="str_level_time">Zeit für das Level</string>
+    <string name="str_level_attempt">Versuche für das Level</string>
+    <string name="str_total_time">Gesamtzeit</string>
+    <string name="str_total_attempt">Versuche gesamt</string>
+    <string name="str_rank_caption">Beste Ergebnisse</string>
+    <string name="str_no_sensor">Für Teeter wird ein G-Sensor (Beschleunigungssensor) auf dem Telefon. Dein Telefon verfügt nicht über diese Funktion. Teeter wird jetzt beendet.</string>
+</resources>

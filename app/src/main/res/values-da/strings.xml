@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="str_app_name">Teeter</string>
+    <string name="str_msg_continue">Vil du fortsætte afspilning?</string>
+    <string name="str_msg_quit">Vil du afslutte?</string>
+    <string name="str_btn_restart">Genstart</string>
+    <string name="str_btn_yes">Ja</string>
+    <string name="str_btn_no">Nej</string>
+    <string name="str_btn_resume">Fortsæt</string>
+    <string name="str_btn_quit">Afslut</string>
+    <string name="str_level_caption">Niveau %d udført</string>
+    <string name="str_level_time">Niveautid</string>
+    <string name="str_level_attempt">Niveauforsøg</string>
+    <string name="str_total_time">Samlet tid</string>
+    <string name="str_total_attempt">Samlet antal forsøg</string>
+    <string name="str_rank_caption">Højeste scorer</string>
+    <string name="str_no_sensor">Teeter kræver en G-føler (accelerometer) på telefonen for at kunne blive afspillet. Din telefon har ikke denne funktion. Teeter lukkes.</string>
+</resources>

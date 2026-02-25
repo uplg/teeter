@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="str_app_name">Teeter</string>
+    <string name="str_msg_continue">Souhaitez-vous continuer à jouer ?</string>
+    <string name="str_msg_quit">Souhaitez-vous quitter ?</string>
+    <string name="str_btn_restart">Recommencer</string>
+    <string name="str_btn_yes">Oui</string>
+    <string name="str_btn_no">Non</string>
+    <string name="str_btn_resume">Reprendre</string>
+    <string name="str_btn_quit">Quitter</string>
+    <string name="str_level_caption">Niveau %d terminé</string>
+    <string name="str_level_time">Durée du niveau</string>
+    <string name="str_level_attempt">Essais du niveau</string>
+    <string name="str_total_time">Temps total</string>
+    <string name="str_total_attempt">Total d\'essais</string>
+    <string name="str_rank_caption">Meilleurs scores</string>
+    <string name="str_no_sensor">Teeter nécessite un G-Sensor (accéléromètre) sur le téléphone pour jouer. Votre téléphone n\'a pas cette fonction. Teeter va maintenant se fermer.</string>
+</resources>
