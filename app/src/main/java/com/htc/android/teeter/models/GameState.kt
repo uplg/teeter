@@ -16,7 +16,8 @@ data class GameState(
     var totalTime: Long = 0,
     var totalAttempts: Int = 0,
     var levelAttempts: Int = 0,
-    var levelStartTime: Long = 0
+    var levelStartTime: Long = 0,
+    var currentLevelFinalTime: Long = 0
 ) {
     /**
      * Initializes and resets state for starting a new level
@@ -28,6 +29,7 @@ data class GameState(
         currentLevel = level
         levelAttempts = 0
         levelStartTime = System.currentTimeMillis()
+        currentLevelFinalTime = 0
     }
 
     /**
@@ -37,7 +39,11 @@ data class GameState(
      * @return Elapsed time in milliseconds for the current level
      */
     fun getLevelTime(): Long {
-        return System.currentTimeMillis() - levelStartTime
+        return if (currentLevelFinalTime > 0) {
+            currentLevelFinalTime
+        } else {
+            System.currentTimeMillis() - levelStartTime
+        }
     }
 
     /**
@@ -46,7 +52,8 @@ data class GameState(
      * This method should be called when the player successfully finishes a level.
      */
     fun completeLevel() {
-        totalTime += getLevelTime()
+        currentLevelFinalTime = System.currentTimeMillis() - levelStartTime
+        totalTime += currentLevelFinalTime
         totalAttempts += levelAttempts
     }
 
@@ -58,5 +65,6 @@ data class GameState(
     fun retry() {
         levelAttempts++
         levelStartTime = System.currentTimeMillis()
+        currentLevelFinalTime = 0
     }
 }

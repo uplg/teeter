@@ -59,6 +59,7 @@ class CTeeterActivity : AppCompatActivity(), CoroutineScope by MainScope() {
         private const val MSG_RESUME_GAME = 291                  // Resume normal game play
         private const val MSG_RESUME_AFTER_RESTART = 1110        // Resume game after restart
         private const val MSG_RESET_GAME = 1929                  // Reset game progress
+        private const val MSG_CHECK_FIRST_LAUNCH_LEVEL = 3000    // Check level on first launch
 
         // Time delay constants (in milliseconds)
         private const val LEVEL_TRANSITION_DELAY = 3000L         // Delay before transitioning to next level
@@ -98,6 +99,7 @@ class CTeeterActivity : AppCompatActivity(), CoroutineScope by MainScope() {
     private var isFromBackground = false           // Flag if activity resumed from background
     private var isDebugMode = false                // Flag if debug mode is enabled
     private var isAnimating = false                // Flag if UI animation is in progress
+    private var isFirstLaunchLevelChecked = false   // Flag if first launch level check is completed
 
     // Current UI page/screen type
     private var currentPageType = PAGE_TYPE_GAME
@@ -152,6 +154,7 @@ class CTeeterActivity : AppCompatActivity(), CoroutineScope by MainScope() {
             putInt(KEY_CURRENT_LEVEL, gameState.currentLevel)
             putBoolean(KEY_IS_GAME_PAUSED, isGamePaused)
             putInt("currentPageType", currentPageType)
+            putBoolean("isFirstLaunchLevelChecked", isFirstLaunchLevelChecked)
         }
         Log.d(
             TAG,
@@ -168,9 +171,10 @@ class CTeeterActivity : AppCompatActivity(), CoroutineScope by MainScope() {
     override fun onRestoreInstanceState(savedInstanceState: Bundle) {
         super.onRestoreInstanceState(savedInstanceState)
         restoreSavedState(savedInstanceState)
+        isFirstLaunchLevelChecked = savedInstanceState.getBoolean("isFirstLaunchLevelChecked", false)
         Log.d(
             TAG,
-            "onRestoreInstanceState: Restored level ${gameState.currentLevel}, paused: $isGamePaused"
+            "onRestoreInstanceState: Restored level ${gameState.currentLevel}, paused: $isGamePaused, levelChecked: $isFirstLaunchLevelChecked"
         )
     }
 
@@ -225,10 +229,10 @@ class CTeeterActivity : AppCompatActivity(), CoroutineScope by MainScope() {
             }
 
             isFirstLaunch -> {
-                // First launch - resume game normally
-                resumeGame()
+                // Send delayed message to check level after data loading
+                mainHandler.sendEmptyMessageDelayed(MSG_CHECK_FIRST_LAUNCH_LEVEL, 100)
                 isFirstLaunch = false
-                Log.d(TAG, "onResume: First launch, game resumed")
+                Log.d(TAG, "onResume: First launch, scheduled level check after delay")
             }
 
             isResettingGame -> {
@@ -309,8 +313,7 @@ class CTeeterActivity : AppCompatActivity(), CoroutineScope by MainScope() {
                 Log.d(TAG, "initGameView: Ball fell in hole, level attempts increased")
             }
 
-            // Setup debug mode touch controls if enabled
-            setTouchListenerForDebugMode()
+            setupUnifiedTouchListener()
         }
 
         // Load saved game progress asynchronously
@@ -438,7 +441,31 @@ class CTeeterActivity : AppCompatActivity(), CoroutineScope by MainScope() {
 
                 // Load the saved level
                 loadLevelAsync(gameState.currentLevel)
+
+                // Check if need to show first launch dialog after loading
+                checkFirstLaunchLevelAfterLoading()
             }
+        }
+    }
+
+    /**
+     * Checks level after saved progress loading for first launch scenario
+     */
+    private fun checkFirstLaunchLevelAfterLoading() {
+        if (!isFirstLaunchLevelChecked && !isFirstLaunch && !isDialogShowing && !isNonGamePage) {
+            Log.d(TAG, "checkFirstLaunchLevelAfterLoading: Checking level after loading - current level: ${gameState.currentLevel}")
+
+            if (gameState.currentLevel != 1) {
+                // Current level is not 1, show continue/restart dialog
+                handleBackgroundResume()
+                Log.d(TAG, "checkFirstLaunchLevelAfterLoading: Level is ${gameState.currentLevel}, show continue/restart dialog")
+            } else {
+                // Level 1, resume game normally
+                resumeGame()
+                Log.d(TAG, "checkFirstLaunchLevelAfterLoading: Level 1, game resumed normally")
+            }
+
+            isFirstLaunchLevelChecked = true
         }
     }
 
@@ -476,10 +503,14 @@ class CTeeterActivity : AppCompatActivity(), CoroutineScope by MainScope() {
                 showGameDialog(DIALOG_CONTINUE_RESTART)
             }
 
-            // Resume game directly for other cases
+            // Resume game directly for other cases (including first launch check)
             else -> {
-                resumeGame()
-                Log.d(TAG, "handleBackgroundResume: Resume game directly")
+                if (gameState.currentLevel != 1) {
+                    showGameDialog(DIALOG_CONTINUE_RESTART)
+                } else {
+                    resumeGame()
+                }
+                Log.d(TAG, "handleBackgroundResume: First launch level check - show dialog or resume")
             }
         }
     }
@@ -1098,73 +1129,89 @@ class CTeeterActivity : AppCompatActivity(), CoroutineScope by MainScope() {
     }
 
     /**
-     * Extension function for GameView to set up debug mode touch controls.
-     * Only enabled when debug mode is active (from intent extra).
+     * Unified touch listener for GameView that handles both debug and normal modes:
+     * - Debug Mode:
+     *   - Left 20%: Toggle hole display (with toast feedback)
+     *   - Right 20%: Toggle end zone display (with toast feedback)
+     *   - Middle: Show quit dialog
+     * - Normal Mode:
+     *   - Any tap: Show quit dialog
      *
-     * Touch zones:
-     * - Left 20%: Toggle hole display
-     * - Right 20%: Toggle end zone display
-     * - Middle: Show quit dialog
+     * Only processes ACTION_DOWN events to avoid duplicate triggers.
      */
     @SuppressLint("ClickableViewAccessibility")
-    private fun GameView.setTouchListenerForDebugMode() {
-        // Only setup debug controls if debug mode is enabled
-        if (!isDebugMode) return
-
+    private fun GameView.setupUnifiedTouchListener() {
         setOnTouchListener { _, event ->
-            // Only process touch down events
-            if (event.action == android.view.MotionEvent.ACTION_DOWN) {
-                // Calculate touch position relative to screen dimensions
-                val screenWidth = width.toFloat()
-                val screenHeight = height.toFloat()
-                val relativeX = event.x / screenWidth
-                val relativeY = event.y / screenHeight
+            // Only handle touch down events (ignore move/up/cancel)
+            if (event.action != android.view.MotionEvent.ACTION_DOWN) {
+                return@setOnTouchListener false
+            }
 
-                // Process touch in valid Y range
-                if (relativeY in 0.0f..1.0f) {
-                    when {
-                        // Left zone - toggle hole display
-                        relativeX < 0.2f -> {
-                            toggleHoleDisplay()
-                            showGlobalToast(if (isHoleDisplayed) "Hole ON" else "Hole OFF")
-                            Log.d(
-                                TAG,
-                                "setTouchListenerForDebugMode: Toggle hole display - ${if (isHoleDisplayed) "ON" else "OFF"}"
-                            )
-                            true
-                        }
-                        // Right zone - toggle end zone display
-                        relativeX > 0.8f -> {
-                            toggleEndDisplay()
-                            showGlobalToast(if (isEndDisplayed) "End ON" else "End OFF")
-                            Log.d(
-                                TAG,
-                                "setTouchListenerForDebugMode: Toggle end display - ${if (isEndDisplayed) "ON" else "OFF"}"
-                            )
-                            true
-                        }
-                        // Middle zone - show quit dialog
-                        else -> {
-                            pauseGame()
-                            showGameDialog(DIALOG_QUIT)
-                            Log.d(
-                                TAG,
-                                "setTouchListenerForDebugMode: Middle touch, show quit dialog"
-                            )
-                            true
-                        }
+            // Ignore touch if on non-game page or dialog is already showing
+            if (isNonGamePage || isDialogShowing) {
+                return@setOnTouchListener false
+            }
+
+            // Calculate relative touch position (0.0f - 1.0f) based on GameView dimensions
+            val screenWidth = width.toFloat()
+            val screenHeight = height.toFloat()
+            val relativeX = event.x / screenWidth
+            val relativeY = event.y / screenHeight
+
+            // Only process valid touch positions (within GameView bounds)
+            if (relativeY !in 0.0f..1.0f) {
+                return@setOnTouchListener false
+            }
+
+            // Branch logic by debug mode status
+            if (isDebugMode) {
+                // DEBUG MODE: Zone-based controls
+                when {
+                    // Left 20%: Toggle hole display
+                    relativeX < 0.2f -> {
+                        toggleHoleDisplay()
+                        showGlobalToast(if (isHoleDisplayed) "Hole ON" else "Hole OFF")
+                        Log.d(
+                            TAG,
+                            "setupUnifiedTouchListener: Debug - Toggled hole display to ${if (isHoleDisplayed) "ON" else "OFF"}"
+                        )
+                        true
                     }
-                } else {
-                    // Touch outside valid Y range - ignore
-                    false
+                    // Right 20%: Toggle end zone display
+                    relativeX > 0.8f -> {
+                        toggleEndDisplay()
+                        showGlobalToast(if (isEndDisplayed) "End ON" else "End OFF")
+                        Log.d(
+                            TAG,
+                            "setupUnifiedTouchListener: Debug - Toggled end display to ${if (isEndDisplayed) "ON" else "OFF"}"
+                        )
+                        true
+                    }
+                    // Middle zone: Show quit dialog
+                    else -> {
+                        pauseGame()
+                        showGameDialog(DIALOG_QUIT)
+                        Log.d(
+                            TAG,
+                            "setupUnifiedTouchListener: Debug - Middle touch, showing quit dialog"
+                        )
+                        true
+                    }
                 }
             } else {
-                // Not touch down event - ignore
-                false
+                // NORMAL MODE: Any tap → Show quit dialog
+                pauseGame()
+                showGameDialog(DIALOG_QUIT)
+                Log.d(
+                    TAG,
+                    "setupUnifiedTouchListener: Normal - Screen tapped, showing quit dialog"
+                )
+                true
             }
         }
-        Log.d(TAG, "setTouchListenerForDebugMode: Debug touch listener set")
+        Log.d(TAG, "setupUnifiedTouchListener: Unified touch listener initialized (debug mode: $isDebugMode)")
     }
+
 
     /**
      * Extension function to format milliseconds into human-readable time string.
@@ -1232,6 +1279,12 @@ class CTeeterActivity : AppCompatActivity(), CoroutineScope by MainScope() {
                 MSG_RESET_GAME -> {
                     activity.resetGameProgress()
                     Log.d(TAG, "DialogHandler: Handle message ${msg.what}, game progress reset")
+                }
+
+                // Handle message for first launch level check
+                MSG_CHECK_FIRST_LAUNCH_LEVEL -> {
+                    activity.checkFirstLaunchLevelAfterLoading()
+                    Log.d(TAG, "DialogHandler: Handle message ${msg.what}, checked first launch level")
                 }
 
                 // Unknown message ID
